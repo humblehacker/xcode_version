@@ -1,0 +1,119 @@
+#!/usr/bin/env ruby
+# 1.9 adds realpath to resolve symlinks; 1.8 doesn't
+# have this method, so we add it so we get resolved symlinks
+# and compatibility
+unless File.respond_to? :realpath
+  class File #:nodoc:
+    def self.realpath path
+      return realpath(File.readlink(path)) if symlink?(path)
+      path
+    end
+  end
+end
+$: << File.expand_path(File.dirname(File.realpath(__FILE__)) + './../lib')
+require 'rubygems'
+require 'xcode_version'
+require 'gli'
+require 'version'
+require 'versionomy'
+
+include GLI::App
+
+#version Version::VERSION
+
+desc 'Describe some switch here'
+switch [:s,:switch]
+
+desc 'Describe some flag here'
+default_value 'the default'
+arg_name 'The name of the argument'
+flag [:f,:flagname]
+
+desc 'Display current version info'
+arg_name 'Describe arguments to bump here'
+
+command :stat do |c|
+  c.action do |global_options,options,args|
+    XcodeVersion.stat
+  end
+end
+
+desc 'On significant changes. Bumps the build number.'
+arg_name 'Describe arguments to bump here'
+
+command :bump do |c|
+  c.action do |global_options,options,args|
+    XcodeVersion.bump
+  end
+end
+
+desc 'On starting a new project. Sets build number to 1 and version to 1.0'
+arg_name 'Describe arguments to new here'
+
+command :new do |c|
+  c.desc 'Describe a switch to new'
+  c.switch :s
+
+  c.desc 'Describe a flag to new'
+  c.default_value 'default'
+  c.flag :f
+  c.action do |global_options,options,args|
+    XcodeVersion.setup
+  end
+end
+
+desc 'On starting a hotfix. Bumps build number and version revision number'
+arg_name 'Describe arguments to hotfix here'
+
+command :hotfix do |c|
+  c.action do |global_options,options,args|
+    XcodeVersion.hotfix
+  end
+end
+
+desc 'On starting a new milestone. Bumps build number and version minor number'
+arg_name 'Describe arguments to minor here'
+
+command :minor do |c|
+  c.action do |global_options,options,args|
+    XcodeVersion.minor
+  end
+end
+
+desc 'On starting a new major release. Bumps build number and version major number'
+arg_name 'Describe arguments to major here'
+
+command :major do |c|
+  c.action do |global_options,options,args|
+    XcodeVersion.major
+  end
+end
+
+pre do |global,command,options,args|
+  # Pre logic here
+  # Return true to proceed; false to abort and not call the
+  # chosen command
+  val = XcodeVersion.what_version
+  if $? != 0
+    raise <<-'END'.gsub(/^ {6}/, "")
+      First, in your build settings,
+        - set "Versioning System" to "Apple Generic"
+        - set "Current Project Version" to 0
+        - add "CFBundleShortVersionString" to Info.plist
+    END
+  end
+  true
+end
+
+post do |global,command,options,args|
+  # Post logic here
+end
+
+on_error do |exception|
+  puts exception
+  # Error logic here
+  # return false to skip default error handling
+  true
+end
+
+exit run(ARGV)
