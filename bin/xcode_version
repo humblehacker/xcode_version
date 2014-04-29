@@ -21,8 +21,8 @@ include GLI::App
 
 #version Version::VERSION
 
-desc 'Describe some switch here'
-switch [:s,:switch]
+desc 'Use agvtool to manipulate version numbers'
+switch [:a,:agvtool]
 
 desc 'Describe some flag here'
 default_value 'the default'
@@ -93,15 +93,7 @@ pre do |global,command,options,args|
   # Pre logic here
   # Return true to proceed; false to abort and not call the
   # chosen command
-  val = XcodeVersion.what_version
-  if $? != 0
-    raise <<-'END'.gsub(/^ {6}/, "")
-      First, in your build settings,
-        - set "Versioning System" to "Apple Generic"
-        - set "Current Project Version" to 0
-        - add "CFBundleShortVersionString" to Info.plist
-    END
-  end
+  XcodeVersion.use_agvtool = global[:agvtool]
   true
 end
 
@@ -111,9 +103,8 @@ end
 
 on_error do |exception|
   puts exception
-  # Error logic here
   # return false to skip default error handling
-  true
+  false
 end
 
 exit run(ARGV)
